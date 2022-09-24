@@ -1,32 +1,37 @@
-// Importing the required modules
-const WebSocketServer = require('ws');
- 
-// Creating a new websocket server
-const wss = new WebSocketServer.Server({ port: 8080 })
-
+const WebSocket = require("ws");
 const express = require("express");
 const app = express()
+const path = require("path")
 
-app.listen(3000);
- 
-// Creating connection using websocket
-wss.on("connection", ws => {
-    console.log("new client connected");
+app.use("/",express.static(path.resolve(__dirname, "../client")))
 
-    app.post("/start", (req, res) => {
-        ws.send("starting web server");
+const myServer = app.listen(8080)       // regular http server using node express which serves your webpage
+
+const wsServer = new WebSocket.Server({
+    noServer: true
+})                                      // a websocket server
+
+wsServer.on("connection", function(ws) {    
+    ws.send("hello there");
+    ws.on("message", function(msg) {        // what to do on message event
+        wsServer.clients.forEach(function each(client) {
+            if (client.readyState === WebSocket.OPEN) {     // check if client is ready
+              client.send(msg.toString());
+            }
+        })
     })
-    // sending message
-    ws.on("message", data => {
-        console.log(`Client has sent us: ${data}`)
-    });
-    // handling what to do when clients disconnects from server
-    ws.on("close", () => {
-        console.log("the client has connected");
-    });
-    // handling client connection error
-    ws.onerror = function () {
-        console.log("Some Error occurred")
+})
+
+myServer.on('upgrade', async function upgrade(request, socket, head) {      //handling upgrade(http to websocekt) event
+
+    // accepts half requests and rejects half. Reload browser page in case of rejection
+    
+    if(Math.random() > 0.5){
+        return socket.end("HTTP/1.1 401 Unauthorized\r\n", "ascii")     //proper connection close in case of rejection
     }
+    
+    //emit connection when request accepted
+    wsServer.handleUpgrade(request, socket, head, function done(ws) {
+      wsServer.emit('connection', ws, request);
+    });
 });
-console.log("The WebSocket server is running on port 8080");
