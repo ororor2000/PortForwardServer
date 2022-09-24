@@ -11,25 +11,23 @@ const wsServer = new WebSocket.Server({
     noServer: true
 })                                      // a websocket server
 
-wsServer.on("connection", function(ws) {    
-    ws.send("hello there");
-    ws.on("message", function(msg) {        // what to do on message event
+wsServer.on("connection", (ws) => {   
+    console.log("got connection") 
+    ws.on("message", (msg) => {        // what to do on message event
         wsServer.clients.forEach(function each(client) {
-            if (client.readyState === WebSocket.OPEN) {     // check if client is ready
+            if (client.readyState === WebSocket.OPEN) {     
+              console.log(msg.toString())                
               client.send(msg.toString());
             }
         })
     })
 })
 
-myServer.on('upgrade', async function upgrade(request, socket, head) {      //handling upgrade(http to websocekt) event
+wsServer.on("close", () => {
+    console.log("closed connection")
+})
 
-    // accepts half requests and rejects half. Reload browser page in case of rejection
-    
-    if(Math.random() > 0.5){
-        return socket.end("HTTP/1.1 401 Unauthorized\r\n", "ascii")     //proper connection close in case of rejection
-    }
-    
+myServer.on('upgrade', async function upgrade(request, socket, head) {      //handling upgrade(http to websocekt) event
     //emit connection when request accepted
     wsServer.handleUpgrade(request, socket, head, function done(ws) {
       wsServer.emit('connection', ws, request);
